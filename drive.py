@@ -24,21 +24,12 @@ from model import BabyHamiltonModel
 import utils
 import click
 
-#initialize our server
+# initialize our server
 sio = socketio.Server()
-#our flask (web) app
 app = Flask(__name__)
 
-#init our model and image array as empty
+# Init empty model 
 model = None
-prev_image_array = None
-
-#set min/max speed for our autonomous car
-MAX_SPEED = 25
-MIN_SPEED = 10
-
-#and a speed limit
-speed_limit = MAX_SPEED
 
 ## Paths
 RECORD_PATH = './record/'
@@ -56,34 +47,23 @@ def telemetry(sid, data):
 
         # The current image from the center camera of the car
         image = Image.open(BytesIO(base64.b64decode(data["image"])))
-        img = np.asarray(image)
-        img = utils.preprocess(img)
         
         try:
-            # from PIL image to numpy array
-            #image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             # predict the steering angle for the image
-            img = Variable(torch.cuda.FloatTensor([img])).permute(0,3,1,2)
-
-            steering_angle_throttle = model(img)
-            #steering_angle = steering_angle_throttle[0].item()
-            #throttle = steering_angle_throttle[1].item()
-            steering_angle = steering_angle_throttle.item()
-            #print(f'steering angle {steering_angle}')
-            # lower the throttle as the speed increases
-            # if the speed is above the current speed limit, we are on a downhill.
-            # make sure we slow down first and then go back to the original max speed.
-            global speed_limit
-            if speed > speed_limit:
-                speed_limit = MIN_SPEED  # slow down
-            else:
-                speed_limit = MAX_SPEED
-            throttle = 1.0 - steering_angle**2 - (speed/speed_limit)**2
-
-            print('sterring_angle: {} throttle: {} spped: {}'.format(steering_angle, throttle, speed))
+            steering_angle = model(img)
+            
+            steering_angle = steering_angle.item()
+            click.echo('Steering angle : {}'.format(steering_angle))
+            
+            throttle = 1.2 - steering_angle ** 2 - (speed / set_speed) ** 2
+            click.echo('Throttle : {}'.format(throttle))      
+            
+            click.echo('Speed : {}'.format(speed))
+            
             send_control(steering_angle, throttle)
+            
         except Exception as e:
-            print(e)
+            click.echo(e)
 
         # save frame
         if new_record_folder_path != '':

@@ -8,7 +8,7 @@ import torchvision.transforms.functional as TF
 import matplotlib.pyplot as plt
 
 
-# Normalization - better term here is Standardization
+# PIL Normalization - better term here is Standardization
 
 
 def normalize_rgb_get_mean_std(x):   
