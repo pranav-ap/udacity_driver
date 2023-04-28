@@ -1,5 +1,7 @@
 # Project Specific
 data/
+lightning/
+logs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

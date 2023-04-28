@@ -1,40 +1,31 @@
-import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torchmetrics
 
 
 class BabyHamiltonModel(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.conv_layers = nn.Sequential(
-            nn.Conv2d(3, 24, 5, stride=2),
-            nn.ELU(),
-            nn.Conv2d(24, 36, 5, stride=2),
-            nn.ELU(),
-            nn.Conv2d(36, 48, 5, stride=2),
-            nn.ELU(),
-            nn.Conv2d(48, 64, 3),
-            nn.ELU(),
-            nn.Conv2d(64, 64, 3),
-            nn.Dropout(0.5)
+        self.net = nn.Sequential(
+            nn.Conv2d(in_channels=3, out_channels=6, kernel_size=5),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2),
+            nn.Conv2d(in_channels=6, out_channels=16, kernel_size=5),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2),
+            nn.Flatten(),
+            nn.Linear(in_features=16*5*5, out_features=120),
+            nn.ReLU(),
+            nn.Linear(in_features=120, out_features=84),
+            nn.ReLU(),
+            nn.Linear(in_features=84, out_features=1)
         )
-        
-        self.linear_layers = nn.Sequential(
-            nn.Linear(in_features=64 * 2 * 33, out_features=100),
-            nn.ELU(),
-            nn.Linear(in_features=100, out_features=50),
-            nn.ELU(),
-            nn.Linear(in_features=50, out_features=10),
-            nn.Linear(in_features=10, out_features=1)
-        )
-    
-    def forward(self, input):
-        input = input.view(input.size(0), 3, 70, 320)
-        output = self.conv_layers(input)
-        # print(output.shape)
-        output = output.view(output.size(0), -1)
-        output = self.linear_layers(output)
-        return output
+
+    def forward(self, x):
+        x = x.view(-1, 3, 128, 128)
+        # normalize to [-1, 1]
+        x = x / 127.5 - 1
+        # run through network
+        x = self.net(x)
+
+        return x
 
