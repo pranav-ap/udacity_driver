@@ -1,28 +1,23 @@
 # networking and other boring stuff
 
-import socketio
-import eventlet
-import eventlet.wsgi
-from flask import Flask
-from io import BytesIO
-
 import base64
-from datetime import datetime
 import os
 import shutil
-
-# main imports
-
-from PIL import Image
-import numpy as np
-
-import torch
-from torch.autograd import Variable
-from model import BabyHamiltonModel
+from datetime import datetime
+from io import BytesIO
 
 # utility functions
-import utils
 import click
+import eventlet
+import eventlet.wsgi
+import socketio
+import torch
+from PIL import Image
+from flask import Flask
+
+from model import BabyHamiltonModel
+
+# main imports
 
 # initialize our server
 sio = socketio.Server()

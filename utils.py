@@ -1,11 +1,28 @@
+import os
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
 import torchvision
-import torchvision.transforms as T
 import torchvision.transforms.functional as TF
 
-import matplotlib.pyplot as plt
+
+# Other
+
+
+def all_paths_exist(paths):
+    return all([os.path.exists(path) for path in paths])
+
+
+def read_preprocessed_driving_csv(csv_path: str):
+    with open(csv_path, 'r') as f:
+        df = pd.read_csv(csv_path)
+        return df
+
+
+def extract_file_name(path):
+    return path.split('\\')[-1]
 
 
 # PIL Normalization - better term here is Standardization

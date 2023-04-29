@@ -1,11 +1,10 @@
-from model import BabyHamiltonModel
-
+import lightning.pytorch as pl
 import torch
 import torch.nn.functional as F
-import lightning.pytorch as pl
-from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from lightning.pytorch.callbacks import ModelCheckpoint, TQDMProgressBar
+from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 
+from model import BabyHamiltonModel
 
 """
 Lightning Utils

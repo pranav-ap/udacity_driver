@@ -1,40 +1,19 @@
-from torch.utils.data import random_split, Dataset, DataLoader
-import torchvision.transforms as T
-import torchvision.transforms.functional as TF
-import lightning.pytorch as pl
-
-from PIL import Image
-import csv
 import random
 
-STEERING_ANGLE_DELTA = 0.2
-STEERING_PERTURB = 0.1
+import lightning.pytorch as pl
+import pandas as pd
+import torchvision
+from torch.utils.data import Dataset, DataLoader
 
-
-def preprocess(image):
-    image = TF.crop(image, top=60, left=0, height=80, width=320)
-    image = TF.resize(image, [128, 128])
-    return image
-
-
-class UdacitySimTripletDataset(Dataset):
-    def __init__(self, samples, images_dir: str):
-        super().__init__()
-        self.samples = samples
-        self.images_dir = images_dir
-
-    def __len__(self):
-        return len(self.samples)
-
-    def __getitem__(self, index):
-        return self.samples[index]
+STEERING_ANGLE_DELTA = 0.3
+# STEERING_PERTURB = 0.1
 
 
 class UdacitySimDataset(Dataset):
-    def __init__(self, samples, images_dir: str, train: bool, transform=None):
+    def __init__(self, samples: pd.DataFrame, root_dir: str, train: bool, transform=None):
         super().__init__()
         self.samples = samples
-        self.images_dir = images_dir
+        self.root_dir = root_dir
         self.train = train
         self.transform = transform
 
@@ -42,8 +21,8 @@ class UdacitySimDataset(Dataset):
         length = len(self.samples)
 
         # Double length if training and using augmentation
-        if self.train and self.transform:
-            length *= 2
+        # if self.train and self.transform:
+        #     length *= 2
 
         return length
 
@@ -52,55 +31,54 @@ class UdacitySimDataset(Dataset):
         1N -> Original
         2N -> Transformed
         """
+        real_index = index # % len(self.samples)
 
-        real_index = index % len(self.samples)
-
-        steering_angle = self.samples[real_index]['steering_angle']
+        steering_angle = self.samples.iloc[real_index]['steering_angle']
 
         # choose one of the three images randomly
-        camera = random.choice(['frontal', 'left', 'right'])
+        camera = random.choice(['center', 'left', 'right'])
 
         if camera == 'left':
-            image = self.samples[real_index]['image_left']
+            image = self.samples.iloc[real_index]['left']
             steering_angle = steering_angle + STEERING_ANGLE_DELTA
         elif camera == 'right':
-            image = self.samples[real_index]['image_right']
+            image = self.samples.iloc[real_index]['right']
             steering_angle = steering_angle - STEERING_ANGLE_DELTA
         else:
-            image = self.samples[real_index]['image_center']
+            image = self.samples.iloc[real_index]['center']
 
         # add noise to steering_angle
-        steering_angle += random.uniform(-STEERING_PERTURB, STEERING_PERTURB)
+        # steering_angle += random.uniform(-STEERING_PERTURB, STEERING_PERTURB)
 
         # Load and process image
-        image = Image.open(self.images_dir + image)
-        image = preprocess(image)
+        folder = self.samples.iloc[real_index]['folder']
+        image = torchvision.io.read_image(self.root_dir + '\\preprocessed\\' + folder + image)
 
-        # To counterbalance the left turn bias
-        if steering_angle < 0 and random.random() <= 0.35:
-            image = TF.hflip(image)
-            steering_angle = -steering_angle
+        # if index >= len(self.samples) and self.transform:
+        #     image = self.transform(image)
 
-        if index >= len(self.samples) and self.transform:
-            image = self.transform(image)
+        # if self.transform:
+        #     image = self.transform(image)
 
         # Note : PILToTensor does not scale values to 0 and 1
-        image = T.PILToTensor()(image)
+        # image = T.PILToTensor()(image)
 
         return image, steering_angle
 
 
 class UdacitySimDataModule(pl.LightningDataModule):
     def __init__(self,
-                 csv_path: str = "\data\driving_log.csv",
-                 images_dir: str = "\data\IMG",
+                 csv_path_train: str = ".\\data\\driving_test_log.csv",
+                 csv_path_test: str = ".\\data\\driving_train_log.csv",
+                 root_dir: str = ".\\data\\",
                  batch_size: int = 32,
                  num_workers: int = 1,
                  train_transform=None,
                  test_transform=None):
         super().__init__()
-        self.csv_path = csv_path
-        self.images_dir = images_dir
+        self.csv_path_train = csv_path_train
+        self.csv_path_test = csv_path_test
+        self.root_dir = root_dir
 
         self.batch_size = batch_size
         self.num_workers = num_workers
@@ -112,57 +90,37 @@ class UdacitySimDataModule(pl.LightningDataModule):
         self.valid_set = None
         self.train_set = None
 
-    def init_full_set(self):
-        full_set = []
-
-        with open(self.csv_path, 'r') as csvfile:
-            data_reader = csv.reader(csvfile, delimiter=',')
-
-            for row in data_reader:
-                # Remove Most Straight Roads
-                if random.random() > 0.15 and row[3] == '0':
-                    continue
-
-                # Example path - Desktop\track1data\IMG\center_2019_04_02_19_25_33_671.jpg
-
-                full_set.append({
-                    'image_center': row[0].split('\\')[-1],
-                    'image_left': row[1].split('\\')[-1],
-                    'image_right': row[2].split('\\')[-1],
-                    'steering_angle': float(row[3]),
-                })
-
-        return full_set
-
-    def setup(self, stage: str): # called once?
-        full_set = self.init_full_set()
-        full_set = UdacitySimTripletDataset(full_set, self.images_dir)
-
-        self.train_set, self.valid_set, self.test_set = random_split(full_set,
-                                                                    [0.7, 0.2, 0.1])
-
+    def setup(self, stage: str):
         # Create three Datasets
+        from utils import read_preprocessed_driving_csv
 
-        if stage == "fit" or stage is None:
+        if stage == "fit":
+            samples: pd.DataFrame = read_preprocessed_driving_csv(self.csv_path_train)
+
+            from sklearn.model_selection import train_test_split
+            samples_train, samples_valid = train_test_split(samples, train_size=0.8, shuffle=True)
+
             self.train_set = UdacitySimDataset(
-                images_dir=self.images_dir,
+                root_dir=self.root_dir,
                 train=True,
-                samples=self.train_set,
+                samples=samples_train,
                 transform=self.train_transform
             )
 
             self.valid_set = UdacitySimDataset(
-                images_dir=self.images_dir,
-                train=True,
-                samples=self.valid_set,
+                root_dir=self.root_dir,
+                train=False,
+                samples=samples_valid,
                 transform=self.test_transform
             )
 
-        if stage == "test" or stage is None:
+        if stage == "test":
+            samples: pd.DataFrame = read_preprocessed_driving_csv(self.csv_path_test)
+
             self.test_set = UdacitySimDataset(
-                images_dir=self.images_dir,
+                root_dir=self.root_dir,
                 train=False,
-                samples=self.test_set,
+                samples=samples,
                 transform=self.test_transform
             )
 
@@ -170,18 +128,25 @@ class UdacitySimDataModule(pl.LightningDataModule):
         return DataLoader(self.train_set,
                           batch_size=self.batch_size,
                           shuffle=True,  # shuffle data every epoch?
-                          num_workers=self.num_workers
+                          num_workers=self.num_workers,
+                          persistent_workers=True,
+                          pin_memory=True
                           )
 
     def val_dataloader(self):
         return DataLoader(self.valid_set,
                           batch_size=self.batch_size,
                           shuffle=False,
-                          num_workers=self.num_workers
+                          num_workers=self.num_workers,
+                          persistent_workers=True,
+                          pin_memory=True
                           )
 
     def test_dataloader(self):
         return DataLoader(self.test_set,
                           batch_size=self.batch_size,
                           shuffle=False,
-                          num_workers=self.num_workers)
+                          num_workers=self.num_workers,
+                          persistent_workers=True,
+                          pin_memory=True
+                          )
