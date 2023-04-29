@@ -7,7 +7,7 @@ import torchvision.transforms.functional as TF
 from torch.utils.data import Dataset, DataLoader
 
 STEERING_ANGLE_DELTA = 0.3
-STEERING_JITTER = 0.1
+STEERING_JITTER = 0.08
 
 
 class UdacitySimDataset(Dataset):
@@ -56,15 +56,12 @@ class UdacitySimDataset(Dataset):
         # Load and process image
         image = torchvision.io.read_image(self.image_dir + image)
 
-        if random.random() <= 0.5:
+        if random.random() <= 0.3:
             image = TF.hflip(image)
             steering_angle = -steering_angle
 
         if index >= len(self.samples) and self.train and self.transform:
             image = self.transform(image)
-
-        # Note : PILToTensor does not scale values to 0 and 1
-        # image = T.PILToTensor()(image)
 
         return image, steering_angle
 

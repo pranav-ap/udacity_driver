@@ -97,22 +97,3 @@ def show_tensor_images(images):
         axs[0, i].imshow(np.asarray(img))
         axs[0, i].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
 
-
-def plot_csv_logger(csv_path,
-                    loss_names=["train_loss", "val_loss"],
-                    eval_names=["train_acc", "val_acc"]):
-    metrics = pd.read_csv(csv_path)
-
-    aggregate_metrics = []
-    agg_col = "epoch"
-    for i, dfg in metrics.groupby(agg_col):
-        agg = dict(dfg.mean())
-        agg[agg_col] = i
-        aggregate_metrics.append(agg)
-
-    df_metrics = pd.DataFrame(aggregate_metrics)
-    df_metrics[loss_names].plot(grid=True, legend=True, xlabel="Epoch", ylabel="Loss")
-    df_metrics[eval_names].plot(grid=True, legend=True, xlabel="Epoch", ylabel="ACC")
-
-    plt.show()
-

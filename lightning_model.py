@@ -12,9 +12,10 @@ Lightning Utils
 
 
 def get_logger():
-    from lightning.pytorch.loggers import CSVLogger
-    logger = CSVLogger(save_dir='lightning/logs/', name='BabyHamilton')
+    from lightning.pytorch.loggers import TensorBoardLogger
+    logger = TensorBoardLogger(save_dir='lightning/logs/')
     return logger
+
 
 """
 Lightning Module
@@ -56,7 +57,8 @@ class LightningBabyHamiltonModel(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(
             self.parameters(),
-            lr=self.learning_rate)
+            lr=self.learning_rate
+        )
 
         return optimizer
 
@@ -70,7 +72,7 @@ class LightningBabyHamiltonModel(pl.LightningModule):
         )
 
         checkpoint = ModelCheckpoint(
-            dirpath='checkpoints/',
+            dirpath='lightning/checkpoints/',
             save_top_k=1,  # maximize the val acc
             mode='max',
             monitor='val_acc',

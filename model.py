@@ -22,10 +22,11 @@ class BabyHamiltonModel(nn.Module):
 
     def forward(self, x):
         x = x.view(-1, 3, 128, 128)
-        # normalize to [-1, 1]
-        x = x / 127.5 - 1
         # run through network
         x = self.net(x)
-
         return x
+
+
+# normalize to [-1, 1]
+# x = x / 127.5 - 1
 

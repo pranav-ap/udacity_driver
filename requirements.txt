@@ -10,3 +10,4 @@ python-socketio==4.6.0
 opencv-python
 pillow
 lightning
+tensorboard
