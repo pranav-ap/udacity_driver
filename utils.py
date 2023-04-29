@@ -5,10 +5,17 @@ import numpy as np
 import pandas as pd
 import torch
 import torchvision
+import torchvision.transforms as T
 import torchvision.transforms.functional as TF
 
 
 # Other
+
+
+def preprocess(image):
+    image = TF.crop(image, top=60, left=0, height=80, width=320)
+    image = TF.resize(image, [128, 128], antialias=True)
+    return image
 
 
 def all_paths_exist(paths):
@@ -86,7 +93,7 @@ def denormalize_rgb_batch(x, mean_per_channel, std_per_channel):
 def show_tensor_images(images):
     fix, axs = plt.subplots(ncols=len(images), squeeze=False)
     for i, img in enumerate(images):
-        img = torchvision.transforms.ToPILImage()(img.to('cpu'))
+        img = T.ToPILImage()(img.to('cpu'))
         axs[0, i].imshow(np.asarray(img))
         axs[0, i].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
 

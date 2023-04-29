@@ -13,7 +13,7 @@ Lightning Utils
 
 def get_logger():
     from lightning.pytorch.loggers import CSVLogger
-    logger = CSVLogger(save_dir='logs/', name='BabyHamilton')
+    logger = CSVLogger(save_dir='lightning/logs/', name='BabyHamilton')
     return logger
 
 """

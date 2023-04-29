@@ -3,26 +3,29 @@ import random
 import lightning.pytorch as pl
 import pandas as pd
 import torchvision
+import torchvision.transforms.functional as TF
 from torch.utils.data import Dataset, DataLoader
 
 STEERING_ANGLE_DELTA = 0.3
-# STEERING_PERTURB = 0.1
+STEERING_JITTER = 0.1
 
 
 class UdacitySimDataset(Dataset):
-    def __init__(self, samples: pd.DataFrame, root_dir: str, train: bool, transform=None):
+    def __init__(self, root_dir: str, samples: pd.DataFrame, train: bool, transform=None):
         super().__init__()
-        self.samples = samples
         self.root_dir = root_dir
+        self.samples = samples
         self.train = train
         self.transform = transform
+
+        self.image_dir = root_dir + 'train\\' if self.train else root_dir + 'test\\'
 
     def __len__(self):
         length = len(self.samples)
 
         # Double length if training and using augmentation
-        # if self.train and self.transform:
-        #     length *= 2
+        if self.train and self.transform:
+            length *= 2
 
         return length
 
@@ -31,7 +34,7 @@ class UdacitySimDataset(Dataset):
         1N -> Original
         2N -> Transformed
         """
-        real_index = index # % len(self.samples)
+        real_index = index % len(self.samples)
 
         steering_angle = self.samples.iloc[real_index]['steering_angle']
 
@@ -47,18 +50,18 @@ class UdacitySimDataset(Dataset):
         else:
             image = self.samples.iloc[real_index]['center']
 
-        # add noise to steering_angle
-        # steering_angle += random.uniform(-STEERING_PERTURB, STEERING_PERTURB)
+        # JITTER : add noise to steering_angle
+        steering_angle += random.uniform(-STEERING_JITTER, STEERING_JITTER)
 
         # Load and process image
-        folder = self.samples.iloc[real_index]['folder']
-        image = torchvision.io.read_image(self.root_dir + '\\preprocessed\\' + folder + image)
+        image = torchvision.io.read_image(self.image_dir + image)
 
-        # if index >= len(self.samples) and self.transform:
-        #     image = self.transform(image)
+        if random.random() <= 0.5:
+            image = TF.hflip(image)
+            steering_angle = -steering_angle
 
-        # if self.transform:
-        #     image = self.transform(image)
+        if index >= len(self.samples) and self.train and self.transform:
+            image = self.transform(image)
 
         # Note : PILToTensor does not scale values to 0 and 1
         # image = T.PILToTensor()(image)
@@ -68,17 +71,15 @@ class UdacitySimDataset(Dataset):
 
 class UdacitySimDataModule(pl.LightningDataModule):
     def __init__(self,
-                 csv_path_train: str = ".\\data\\driving_test_log.csv",
-                 csv_path_test: str = ".\\data\\driving_train_log.csv",
-                 root_dir: str = ".\\data\\",
+                 root_dir: str,
                  batch_size: int = 32,
                  num_workers: int = 1,
                  train_transform=None,
                  test_transform=None):
         super().__init__()
-        self.csv_path_train = csv_path_train
-        self.csv_path_test = csv_path_test
         self.root_dir = root_dir
+        self.csv_path_train = root_dir + 'driving_train_log.csv'
+        self.csv_path_test = root_dir + 'driving_test_log.csv'
 
         self.batch_size = batch_size
         self.num_workers = num_workers
@@ -101,16 +102,16 @@ class UdacitySimDataModule(pl.LightningDataModule):
             samples_train, samples_valid = train_test_split(samples, train_size=0.8, shuffle=True)
 
             self.train_set = UdacitySimDataset(
-                root_dir=self.root_dir,
-                train=True,
+                self.root_dir,
                 samples=samples_train,
+                train=True,
                 transform=self.train_transform
             )
 
             self.valid_set = UdacitySimDataset(
-                root_dir=self.root_dir,
-                train=False,
+                self.root_dir,
                 samples=samples_valid,
+                train=False,
                 transform=self.test_transform
             )
 
@@ -118,9 +119,9 @@ class UdacitySimDataModule(pl.LightningDataModule):
             samples: pd.DataFrame = read_preprocessed_driving_csv(self.csv_path_test)
 
             self.test_set = UdacitySimDataset(
-                root_dir=self.root_dir,
-                train=False,
+                self.root_dir,
                 samples=samples,
+                train=False,
                 transform=self.test_transform
             )
 
