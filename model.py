@@ -1,31 +1,37 @@
+import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class BabyHamiltonModel(nn.Module):
     def __init__(self):
         super().__init__()
+        self.conv1 = nn.Conv2d(3, 6, 5, stride=2)
+        self.conv2 = nn.Conv2d(6, 16, 5, stride=2)
 
-        self.net = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=6, kernel_size=5),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2),
-            nn.Conv2d(in_channels=6, out_channels=16, kernel_size=5),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2),
-            nn.Flatten(),
-            nn.Linear(in_features=16*5*5, out_features=120),
-            nn.ReLU(),
-            nn.Linear(in_features=120, out_features=84),
-            nn.ReLU(),
-            nn.Linear(in_features=84, out_features=1)
-        )
+        self.fc1 = nn.Linear(784, 120)
+        self.fc2 = nn.Linear(120, 84)
+        self.fc3 = nn.Linear(84, 1)
 
     def forward(self, x):
-        x = x.view(-1, 3, 128, 128)
-        # run through network
-        x = self.net(x)
-        return x
+        x = self.conv1(x)
+        x = F.relu(x)
 
+        x = F.max_pool2d(x, 2)
+        x = F.relu(self.conv2(x))
+        x = F.max_pool2d(x, 2)
+
+        # print('Size 1 : {0}'.format(x.size()))
+        x = x.view(x.size(0), -1)
+        # print('Size 2 : {0}'.format(x.size()))
+
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+
+        x = torch.squeeze(x)
+
+        return x
 
 # normalize to [-1, 1]
 # x = x / 127.5 - 1

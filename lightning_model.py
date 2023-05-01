@@ -3,6 +3,7 @@ import torch
 import torch.nn.functional as F
 from lightning.pytorch.callbacks import ModelCheckpoint, TQDMProgressBar
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
+from lightning.pytorch.loggers import TensorBoardLogger, CSVLogger
 
 from model import BabyHamiltonModel
 
@@ -12,8 +13,8 @@ Lightning Utils
 
 
 def get_logger():
-    from lightning.pytorch.loggers import TensorBoardLogger
-    logger = TensorBoardLogger(save_dir='lightning/logs/')
+    # logger = TensorBoardLogger(save_dir='lightning/logs/')
+    logger = CSVLogger(save_dir='lightning/logs/')
     return logger
 
 
@@ -40,7 +41,7 @@ class LightningBabyHamiltonModel(pl.LightningModule):
         self.log("train_loss", train_loss, prog_bar=True)
 
         return train_loss
-    
+
     def evaluate(self, batch, stage=None):
         images, steering_angles = batch
         steering_angles_hat = self.model(images)
@@ -64,24 +65,24 @@ class LightningBabyHamiltonModel(pl.LightningModule):
 
     def configure_callbacks(self):
         early_stop = EarlyStopping(
-            monitor="val_acc",
+            monitor="val_loss",
+            mode="min",
             min_delta=0.00,
             patience=3,
             verbose=False,
-            mode="max"
         )
 
         checkpoint = ModelCheckpoint(
+            monitor='val_loss',
+            mode='min',
             dirpath='lightning/checkpoints/',
-            save_top_k=1,  # maximize the val acc
-            mode='max',
-            monitor='val_acc',
+            save_top_k=1,
             save_last=True
         )
-        
+
         progress_bar = TQDMProgressBar(
             refresh_rate=10
         )
-    
+
         return [early_stop, checkpoint, progress_bar]
-    
+
