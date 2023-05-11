@@ -28,10 +28,6 @@ def read_preprocessed_driving_csv(csv_path: str):
         return df
 
 
-def extract_file_name(path):
-    return path.split('\\')[-1]
-
-
 # PIL Normalization - better term here is Standardization
 
 

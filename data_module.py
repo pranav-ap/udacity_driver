@@ -57,7 +57,7 @@ class UdacitySimDataset(Dataset):
             image = self.samples.iloc[real_index]['center']
 
         # JITTER : add noise to steering_angle
-        steering_angle += random.uniform(-STEERING_JITTER, STEERING_JITTER)
+        # steering_angle += random.uniform(-STEERING_JITTER, STEERING_JITTER)
 
         # Load and process image
         path = os.path.join(self.image_dir, image)
@@ -69,6 +69,8 @@ class UdacitySimDataset(Dataset):
 
         if self.transform and index >= len(self.samples):
             image = self.transform(image)
+        else:
+            image = image / 127.5 - 1  # normalize to [-1, 1]
 
         return image, steering_angle
 
@@ -81,15 +83,16 @@ class UdacitySimDataset(Dataset):
 
         if self.transform:
             image = self.transform(image)
-            # image = image / 127.5 - 1
+        else:
+            image = image / 127.5 - 1  # normalize to [-1, 1]
 
         return image, steering_angle
 
     def __getitem__(self, index):
         image, steering_angle = self.get_item_train(index) if self.stage == 'train' else self.get_item_valid_test(index)
 
-        image = image.float() # tensor float 32
-        steering_angle = steering_angle.astype(np.float32) # np scalar float 32
+        image = image.float()  # tensor float 32
+        steering_angle = steering_angle.astype(np.float32)  # np scalar float 32
 
         return image, steering_angle
 

@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 from lightning.pytorch.callbacks import ModelCheckpoint, TQDMProgressBar
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
-from lightning.pytorch.loggers import TensorBoardLogger, CSVLogger
+from lightning.pytorch.loggers import TensorBoardLogger  # CSVLogger
 
 from model import BabyHamiltonModel
 
@@ -13,8 +13,8 @@ Lightning Utils
 
 
 def get_logger():
-    # logger = TensorBoardLogger(save_dir='lightning/logs/')
-    logger = CSVLogger(save_dir='lightning/logs/')
+    logger = TensorBoardLogger(save_dir='lightning/logs/')
+    # logger = CSVLogger(save_dir='lightning/logs/')
     return logger
 
 
@@ -26,7 +26,7 @@ Lightning Module
 class LightningBabyHamiltonModel(pl.LightningModule):
     def __init__(self,
                  model: BabyHamiltonModel,
-                 learning_rate=0.1):
+                 learning_rate=0.01):
         super().__init__()
 
         self.model = model
@@ -56,9 +56,10 @@ class LightningBabyHamiltonModel(pl.LightningModule):
         self.evaluate(batch, "test")
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(
+        optimizer = torch.optim.SGD(
             self.parameters(),
-            lr=self.learning_rate
+            lr=self.learning_rate,
+            momentum=0.9,
         )
 
         return optimizer
@@ -80,9 +81,7 @@ class LightningBabyHamiltonModel(pl.LightningModule):
             save_last=True
         )
 
-        progress_bar = TQDMProgressBar(
-            refresh_rate=10
-        )
+        progress_bar = TQDMProgressBar()
 
         return [early_stop, checkpoint, progress_bar]
 
