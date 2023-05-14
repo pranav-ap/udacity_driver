@@ -10,7 +10,7 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
 from utils import read_preprocessed_driving_csv
 
-STEERING_ANGLE_DELTA = 0.3
+STEERING_ANGLE_DELTA = 0.2
 STEERING_JITTER = 0.08
 
 
@@ -61,7 +61,11 @@ class UdacitySimDataset(Dataset):
 
         # Load and process image
         path = os.path.join(self.image_dir, image)
-        image = torchvision.io.read_image(path)
+
+        try:
+            image = torchvision.io.read_image(path)
+        except:
+            print('READ IMAGE : {0}'.format(path))
 
         if random.random() < 0.3:
             image = TF.hflip(image)
@@ -69,8 +73,8 @@ class UdacitySimDataset(Dataset):
 
         if self.transform and index >= len(self.samples):
             image = self.transform(image)
-        else:
-            image = image / 127.5 - 1  # normalize to [-1, 1]
+        # else:
+        #     image = image / 127.5 - 1  # normalize to [-1, 1]
 
         return image, steering_angle
 

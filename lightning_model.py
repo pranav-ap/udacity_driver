@@ -1,9 +1,9 @@
 import lightning.pytorch as pl
 import torch
 import torch.nn.functional as F
-from lightning.pytorch.callbacks import ModelCheckpoint, TQDMProgressBar
+from lightning.pytorch.callbacks import ModelCheckpoint, TQDMProgressBar, LearningRateMonitor, ModelSummary
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
-from lightning.pytorch.loggers import TensorBoardLogger  # CSVLogger
+from lightning.pytorch.loggers import TensorBoardLogger  # CometLogger  CSVLogger
 
 from model import BabyHamiltonModel
 
@@ -15,6 +15,7 @@ Lightning Utils
 def get_logger():
     logger = TensorBoardLogger(save_dir='lightning/logs/')
     # logger = CSVLogger(save_dir='lightning/logs/')
+    # logger = CometLogger(save_dir='lightning/logs/')
     return logger
 
 
@@ -31,7 +32,14 @@ class LightningBabyHamiltonModel(pl.LightningModule):
 
         self.model = model
         self.learning_rate = learning_rate
-        self.save_hyperparameters(ignore=['model'])
+
+        self.example_input_array = torch.rand(128, 3, 128, 128)
+
+        self.save_hyperparameters(ignore=['model', 'example_input_array'])
+
+    def forward(self, images):
+        steering_angles_hat = self.model(images)
+        return steering_angles_hat
 
     def training_step(self, batch, batch_idx):
         images, steering_angles = batch
@@ -62,7 +70,15 @@ class LightningBabyHamiltonModel(pl.LightningModule):
             momentum=0.9,
         )
 
-        return optimizer
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)
+
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "monitor": "val_loss"
+            }
+        }
 
     def configure_callbacks(self):
         early_stop = EarlyStopping(
@@ -83,5 +99,9 @@ class LightningBabyHamiltonModel(pl.LightningModule):
 
         progress_bar = TQDMProgressBar()
 
-        return [early_stop, checkpoint, progress_bar]
+        lr_monitor = LearningRateMonitor(logging_interval='step')
+
+        summary = ModelSummary(max_depth=-1)
+
+        return [early_stop, checkpoint, progress_bar, lr_monitor, summary]
 

@@ -26,10 +26,12 @@ app = Flask(__name__)
 # Init empty model 
 model = None
 
-## Paths
+
+# Paths
 RECORD_PATH = './record/'
 MODELS_PATH = './models/'
 new_record_folder_path = ''
+
 
 #registering event handler for the server
 @sio.on('telemetry')
@@ -68,11 +70,13 @@ def telemetry(sid, data):
     else:
         sio.emit('manual', data={}, skip_sid=True)
 
+
 # Function to connect and communiucate with simulator socket.
 @sio.on('connect')
 def connect(sid, environ):
     print("connect ", sid)
     send_control(0, 0)
+
 
 # Send the generated steering angle and acceleration value to the simulator
 def send_control(steering_angle, throttle):
@@ -84,6 +88,7 @@ def send_control(steering_angle, throttle):
 
 def start(model_name, record, clear):
     # load model
+    global model
     model = BabyHamiltonModel()
 
     if torch.cuda.is_available():
