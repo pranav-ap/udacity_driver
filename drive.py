@@ -2,6 +2,7 @@ import base64
 from io import BytesIO
 from datetime import datetime
 import os
+import shutil
 import eventlet
 import eventlet.wsgi
 import socketio
@@ -21,7 +22,7 @@ from utils import preprocess
 sio = socketio.Server()
 app = Flask(__name__)
 
-RECORDINGS_ROOT = './recordings/'
+RECORDINGS_ROOT = '.\\recordings\\'
 NEW_RECORDINGS_PATH = ''
 
 # Setup device agnostic code
@@ -29,9 +30,8 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Using device: {device}")
 
 # Init empty model
-# BEST_MODEL_PATH = './lightning/checkpoints/epoch=18-step=2926 - bh1.ckpt'
-# BEST_MODEL_PATH = './lightning/checkpoints/epoch=10-step=3850 - bh2.ckpt'
-BEST_MODEL_PATH = './lightning/checkpoints/epoch=3-step=1400.ckpt'
+BEST_MODEL_PATH = './lightning/checkpoints/bh model.ckpt'
+# BEST_MODEL_PATH = './lightning/checkpoints/epoch=12-step=2975.ckpt'
 
 model = BabyHamiltonModel()
 lightning_model: LightningBabyHamiltonModel = LightningBabyHamiltonModel.load_from_checkpoint(
@@ -63,8 +63,8 @@ def telemetry(sid, data):
         speed = float(data["speed"])
 
         # The current image from the center camera of the car
-        image = Image.open(BytesIO(base64.b64decode(data["image"])))
-        image = T.ToTensor()(image)
+        image_orig = Image.open(BytesIO(base64.b64decode(data["image"])))
+        image = T.ToTensor()(image_orig)
         image = preprocess(image)
         image = image.float()
         image = test_transform(image)
@@ -84,10 +84,10 @@ def telemetry(sid, data):
         send_control(steering_angle_hat, throttle)
 
         # save frame
-        if NEW_RECORDINGS_PATH != '':
-            timestamp = datetime.utcnow().strftime('%Y_%m_%d_%H_%M_%S_%f')[:-3]
-            image_filepath = os.path.join(NEW_RECORDINGS_PATH, timestamp)
-            image.save('{}.jpg'.format(image_filepath))
+        # if NEW_RECORDINGS_PATH != '':
+        #     timestamp = datetime.utcnow().strftime('%Y_%m_%d_%H_%M_%S_%f')[:-3]
+        #     image_filepath = os.path.join(NEW_RECORDINGS_PATH, timestamp)
+        #     image_orig.save('{}.jpg'.format(image_filepath))
     else:
         sio.emit('manual', data={}, skip_sid=True)
 
@@ -113,6 +113,11 @@ def start(record):
     if record != '':
         global NEW_RECORDINGS_PATH
         NEW_RECORDINGS_PATH = RECORDINGS_ROOT + record
+
+        if os.path.exists(NEW_RECORDINGS_PATH):
+            shutil.rmtree(NEW_RECORDINGS_PATH)
+
+        os.makedirs(NEW_RECORDINGS_PATH)
 
     global app
     app = socketio.Middleware(sio, app)
