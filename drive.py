@@ -1,5 +1,7 @@
 import base64
 from io import BytesIO
+from datetime import datetime
+import os
 import eventlet
 import eventlet.wsgi
 import socketio
@@ -19,18 +21,21 @@ from utils import preprocess
 sio = socketio.Server()
 app = Flask(__name__)
 
+RECORDINGS_ROOT = './recordings/'
+NEW_RECORDINGS_PATH = ''
+
 # Setup device agnostic code
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Using device: {device}")
 
 # Init empty model
-# best_model_path = './lightning/checkpoints/epoch=18-step=2926 - bh1.ckpt'
-# best_model_path = './lightning/checkpoints/epoch=10-step=3850 - bh2.ckpt'
-best_model_path = './lightning/checkpoints/epoch=3-step=1400.ckpt'
+# BEST_MODEL_PATH = './lightning/checkpoints/epoch=18-step=2926 - bh1.ckpt'
+# BEST_MODEL_PATH = './lightning/checkpoints/epoch=10-step=3850 - bh2.ckpt'
+BEST_MODEL_PATH = './lightning/checkpoints/epoch=3-step=1400.ckpt'
 
 model = BabyHamiltonModel()
 lightning_model: LightningBabyHamiltonModel = LightningBabyHamiltonModel.load_from_checkpoint(
-    best_model_path,
+    BEST_MODEL_PATH,
     model=model
 )
 
@@ -77,6 +82,12 @@ def telemetry(sid, data):
         # click.echo('Throttle : {}'.format(throttle))
 
         send_control(steering_angle_hat, throttle)
+
+        # save frame
+        if NEW_RECORDINGS_PATH != '':
+            timestamp = datetime.utcnow().strftime('%Y_%m_%d_%H_%M_%S_%f')[:-3]
+            image_filepath = os.path.join(NEW_RECORDINGS_PATH, timestamp)
+            image.save('{}.jpg'.format(image_filepath))
     else:
         sio.emit('manual', data={}, skip_sid=True)
 
@@ -98,7 +109,11 @@ def send_control(steering_angle, throttle):
     )
 
 
-def start(model_name, record, clear):
+def start(record):
+    if record != '':
+        global NEW_RECORDINGS_PATH
+        NEW_RECORDINGS_PATH = RECORDINGS_ROOT + record
+
     global app
     app = socketio.Middleware(sio, app)
     eventlet.wsgi.server(eventlet.listen(('', 4567)), app)

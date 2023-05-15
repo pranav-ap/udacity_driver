@@ -1,6 +1,6 @@
 import click
 import drive
-import train
+import video
 
 
 @click.group()
@@ -9,19 +9,18 @@ def cli():
 
 
 @cli.command('drive')
-@click.option('--model', default='', help='Name of Model')
-@click.option('--record', is_flag=True, help='Record and store frames of simulation?')
-@click.option('--clear', is_flag=True, help='Clear Previous recordings?')
-def drive_cmd(model: str, record: bool, clear: bool):
+@click.option('--record', default='', help='Where to store the recorded images?')
+def drive_cmd(record: str):
     click.echo('Begin Driving!')
-    drive.start(model, record, clear)
+    drive.start(record)
 
 
-@cli.command('train')
-@click.option('--model', default='', help='Name of Model')
-def train_cmd(model: str):
-    click.echo('Begin Training!')
-    train.start(model)
+@cli.command('video')
+@click.option('--record', default='', required=True, help='Path to image folder. The video will be created from these images.')
+@click.option('--fps', default=60, help='FPS (Frames per second) setting for the video.')
+def video_cmd(record: str, fps: int):
+    click.echo('Begin Making Video!')
+    video.start(record, fps)
 
 
 if __name__ == '__main__':
