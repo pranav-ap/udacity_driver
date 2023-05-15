@@ -1,6 +1,6 @@
-import lightning.pytorch as pl
 import torch
 import torch.nn.functional as F
+import lightning.pytorch as pl
 from lightning.pytorch.callbacks import ModelCheckpoint, TQDMProgressBar, LearningRateMonitor, ModelSummary
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from lightning.pytorch.loggers import TensorBoardLogger  # CometLogger  CSVLogger
@@ -32,9 +32,7 @@ class LightningBabyHamiltonModel(pl.LightningModule):
 
         self.model = model
         self.learning_rate = learning_rate
-
-        self.example_input_array = torch.rand(128, 3, 128, 128)
-
+        self.example_input_array = torch.rand(256, 3, 128, 128)
         self.save_hyperparameters(ignore=['model', 'example_input_array'])
 
     def forward(self, images):

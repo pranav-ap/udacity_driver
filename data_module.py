@@ -1,5 +1,5 @@
 import random
-import os
+import os, sys
 import lightning.pytorch as pl
 import numpy as np
 import pandas as pd
@@ -10,7 +10,8 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
 from utils import read_preprocessed_driving_csv
 
-STEERING_ANGLE_DELTA = 0.2
+# Constants
+STEERING_ANGLE_DELTA = 0.3
 STEERING_JITTER = 0.08
 
 
@@ -30,34 +31,28 @@ class UdacitySimDataset(Dataset):
     def __len__(self):
         length = len(self.samples)
 
-        # Double length if training as we use augmentation
         if self.stage == 'train' and self.transform:
-            length *= 2
+            # length *= 3  # 3 cameras
+            length *= 4  # 4 variations per image
 
         return length
 
     def get_item_train(self, index):
         """
-        1N -> Original
-        2N -> Transformed
+        Sections:
+        0 -> Original
+        1 -> Transformed
+        2 -> Flipped Original
+        3 -> Flipped Transformed
         """
         real_index = index % len(self.samples)
+        section = index // len(self.samples)
+
+        must_transform = section in [1, 3]
+        must_flip = section in [2, 3]
+
+        image = self.samples.iloc[real_index]['center']
         steering_angle = self.samples.iloc[real_index]['steering_angle']
-
-        # choose one of the three images randomly
-        camera = random.choice(['center', 'left', 'right'])
-
-        if camera == 'left':
-            image = self.samples.iloc[real_index]['left']
-            steering_angle = steering_angle + STEERING_ANGLE_DELTA
-        elif camera == 'right':
-            image = self.samples.iloc[real_index]['right']
-            steering_angle = steering_angle - STEERING_ANGLE_DELTA
-        else:
-            image = self.samples.iloc[real_index]['center']
-
-        # JITTER : add noise to steering_angle
-        # steering_angle += random.uniform(-STEERING_JITTER, STEERING_JITTER)
 
         # Load and process image
         path = os.path.join(self.image_dir, image)
@@ -65,16 +60,14 @@ class UdacitySimDataset(Dataset):
         try:
             image = torchvision.io.read_image(path)
         except:
-            print('READ IMAGE : {0}'.format(path))
+            sys.exit('EXCEPTION while Reading IMAGE : {0}'.format(path))
 
-        if random.random() < 0.3:
+        if must_flip:
             image = TF.hflip(image)
             steering_angle = -steering_angle
 
-        if self.transform and index >= len(self.samples):
+        if self.transform and must_transform:
             image = self.transform(image)
-        # else:
-        #     image = image / 127.5 - 1  # normalize to [-1, 1]
 
         return image, steering_angle
 
@@ -83,12 +76,14 @@ class UdacitySimDataset(Dataset):
 
         image = self.samples.iloc[index]['center']
         path = os.path.join(self.image_dir, image)
-        image = torchvision.io.read_image(path)
+
+        try:
+            image = torchvision.io.read_image(path)
+        except:
+            sys.exit('EXCEPTION while Reading IMAGE : {0}'.format(path))
 
         if self.transform:
             image = self.transform(image)
-        else:
-            image = image / 127.5 - 1  # normalize to [-1, 1]
 
         return image, steering_angle
 
