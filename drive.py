@@ -25,9 +25,6 @@ app = Flask(__name__)
 RECORDINGS_ROOT = '.\\recordings\\'
 NEW_RECORDINGS_PATH = ''
 
-# Setup device agnostic code
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"Using device: {device}")
 
 # Init empty model
 BEST_MODEL_PATH = './lightning/checkpoints/bh model.ckpt'
