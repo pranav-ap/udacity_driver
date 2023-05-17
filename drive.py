@@ -27,8 +27,11 @@ NEW_RECORDINGS_PATH = ''
 
 
 # Init empty model
-BEST_MODEL_PATH = './lightning/checkpoints/bh model.ckpt'
-# BEST_MODEL_PATH = './lightning/checkpoints/epoch=12-step=2975.ckpt'
+# BEST_MODEL_PATH = './lightning/checkpoints/bh model.ckpt'
+BEST_MODEL_PATH = './lightning/checkpoints/epoch=9-step=1670.ckpt'
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print('Using device: {}'.format(device))
 
 model = BabyHamiltonModel()
 lightning_model: LightningBabyHamiltonModel = LightningBabyHamiltonModel.load_from_checkpoint(
@@ -66,7 +69,7 @@ def telemetry(sid, data):
         image = image.float()
         image = test_transform(image)
         image = image.view(-1, 3, 128, 128)
-        # image = image.to(device)
+        image = image.to(device)
 
         steering_angle_hat = lightning_model(image)
         steering_angle_hat = steering_angle_hat.item()
