@@ -51,8 +51,14 @@ class UdacitySimDataset(Dataset):
         must_transform = section in [1, 3]
         must_flip = section in [2, 3]
 
-        image = self.samples.iloc[real_index]['center']
+        camera = random.choice(['center', 'left', 'right'])
+        image = self.samples.iloc[real_index][camera]
         steering_angle = self.samples.iloc[real_index]['steering_angle']
+
+        if camera == 'left':
+            steering_angle += STEERING_ANGLE_DELTA
+        elif camera == 'right':
+            steering_angle -= STEERING_ANGLE_DELTA
 
         # Load and process image
         path = os.path.join(self.image_dir, image)

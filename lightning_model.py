@@ -66,6 +66,7 @@ class LightningBabyHamiltonModel(pl.LightningModule):
             self.parameters(),
             lr=self.learning_rate,
             momentum=0.9,
+            # weight_decay=0.0001
         )
 
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)
