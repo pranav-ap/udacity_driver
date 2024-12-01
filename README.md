@@ -1,4 +1,13 @@
-# Self Driving Car - Udacity
+# Driving Behavior Cloning 
+
+## Overview
+
+The the goal of behavioral cloning is to collect data while 
+exhibiting good behavior and then train a model to mimic that behavior.
+
+This project uses a simulator to collect data to 
+train a model to drive the car autonomously. The simulator was released by Udacity for its
+Self-Driving Car Nanodegree. 
 
 ## Setup
 
@@ -10,7 +19,7 @@ conda install pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvi
 
 ## Usage
 
-In order to use the model and drive the car, run the following command:
+To use the model and drive the car, run the following command:
 
 ```
 python .\run.py drive 
@@ -26,20 +35,21 @@ The images will be found in 'recordings\folder_name'.
 
 ## Training
 
-As per the instructions, the model was trained on data collected from the first track.  
+The simulator supports two tracks. The model was trained on data 
+collected from the first track. The second track is used for testing. 
 
-- The optimizer used is SGD with momentum of 0.9.
-- The ReduceLROnPlateau scheduler was used 
+Since most of the turns in the tracks are left turns, we have
+an imbalanced dataset. To address this, I used data augmentation
+to generate more right turns by using image flips, along with other standard
+augmentations like adding noises, brightness, and contrast adjustments.
 
-The model is fully convolutional, i.e. it does not use linear layers. It uses strided 
-convolutions to reduce spatial dimensions. 
+The model used is based on the one used in the NVIDIA End to End Learning 
+for Self-Driving Cars paper. 
 
-It uses Batch norm to make the training stable. The activation function used is ELU.
+The model is fully convolutional and uses Batch norm to make the training stable. 
+The activation function used is ELU. The final layer is a tanh activation function 
+because it scales the output to `[-1, 1]`.
 
-The final layer uses tanh as the activation function as the output is scaled to `[-1, 1]`. 
-
-The training was performed on Google Colab.
-You can find a video of the model running is in this repo.
-This project uses the version 2 of the simulator as you suggested on Moodle. 
- 
+The optimizer used is SGD with momentum of 0.9 along with the 
+ReduceLROnPlateau scheduler. 
 
