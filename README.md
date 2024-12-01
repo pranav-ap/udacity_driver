@@ -2,7 +2,7 @@
 
 ## Overview
 
-The the goal of behavioral cloning is to collect data while 
+The goal of behavioral cloning is to collect data while 
 exhibiting good behavior and then train a model to mimic that behavior.
 
 This project uses a simulator to collect data to 
